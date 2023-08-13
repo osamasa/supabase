@@ -1448,9 +1448,9 @@ COPY auth.users (instance_id, id, aud, role, email, encrypted_password, email_co
 --
 
 COPY public.game_record (id, created_at, modified_at, game_no, player_1, player_2, player_3, player_4, score_1, score_2, game_id) FROM stdin;
-34	2023-08-13 12:07:49.952836+00	2023-08-13 12:07:49.952836+00	1	1	2	3	4	0	0	35
-35	2023-08-13 12:07:49.952836+00	2023-08-13 12:07:49.952836+00	1	1	3	2	4	0	0	35
-36	2023-08-13 12:07:49.952836+00	2023-08-13 12:07:49.952836+00	1	1	4	2	3	0	0	35
+77	2023-08-13 13:50:17.131948+00	2023-08-13 13:50:17.131948+00	1	1	3	2	4	0	0	49
+78	2023-08-13 13:50:17.131948+00	2023-08-13 13:50:17.131948+00	1	1	4	2	3	0	0	49
+76	2023-08-13 13:50:17.131948+00	2023-08-13 13:50:17.131948+00	1	1	2	3	4	4	0	49
 \.
 
 
@@ -1459,10 +1459,10 @@ COPY public.game_record (id, created_at, modified_at, game_no, player_1, player_
 --
 
 COPY public.game_user (id, created_at, modified_at, player_no, player_name, game_id) FROM stdin;
-5	2023-08-13 12:07:49.952836+00	2023-08-13 12:07:49.952836+00	1	NULL	35
-6	2023-08-13 12:07:49.952836+00	2023-08-13 12:07:49.952836+00	2	NULL	35
-7	2023-08-13 12:07:49.952836+00	2023-08-13 12:07:49.952836+00	3	NULL	35
-8	2023-08-13 12:07:49.952836+00	2023-08-13 12:07:49.952836+00	4	NULL	35
+61	2023-08-13 13:50:17.131948+00	2023-08-13 13:50:17.131948+00	1	NULL	49
+62	2023-08-13 13:50:17.131948+00	2023-08-13 13:50:17.131948+00	2	NULL	49
+63	2023-08-13 13:50:17.131948+00	2023-08-13 13:50:17.131948+00	3	NULL	49
+64	2023-08-13 13:50:17.131948+00	2023-08-13 13:50:17.131948+00	4	NULL	49
 \.
 
 
@@ -1471,7 +1471,7 @@ COPY public.game_user (id, created_at, modified_at, player_no, player_name, game
 --
 
 COPY public.games (id, created_at, modified_at, player_num, coat_num, dobules_flg, userid) FROM stdin;
-35	2023-08-13 12:07:49.952836+00	2023-08-13 12:07:49.952836+00	4	1	t	Ufe9e746df649a4b36e12b70e87d30aa4
+49	2023-08-13 13:50:17.131948+00	2023-08-13 13:50:17.131948+00	4	1	t	Ufe9e746df649a4b36e12b70e87d30aa4
 \.
 
 
@@ -5583,21 +5583,21 @@ SELECT pg_catalog.setval('auth.refresh_tokens_id_seq', 1, false);
 -- Name: game_record_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.game_record_id_seq', 36, true);
+SELECT pg_catalog.setval('public.game_record_id_seq', 78, true);
 
 
 --
 -- Name: game_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.game_user_id_seq', 8, true);
+SELECT pg_catalog.setval('public.game_user_id_seq', 64, true);
 
 
 --
 -- Name: games_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.games_id_seq', 35, true);
+SELECT pg_catalog.setval('public.games_id_seq', 49, true);
 
 
 --
@@ -5611,7 +5611,7 @@ SELECT pg_catalog.setval('public.random_number_table_id_seq', 4080, true);
 -- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.users_id_seq', 32, true);
+SELECT pg_catalog.setval('public.users_id_seq', 47, true);
 
 
 --
