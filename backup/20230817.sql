@@ -416,27 +416,16 @@ cur1 CURSOR FOR
 	select no,p1,p2 from random_number_table where person_num=_person_num ORDER by no;
 
 begin
-  loopnum = 0;
-	_i_loop = 1;
-	if _coat_num > 1 then
-		if _dobules_flg = true then
-		  if(_coat_num * 4 <= _person_num) then
-				loopnum = _coat_num;
-			else 
-			  loopnum = trunc( _person_num / 4);
-			end if;
-		else
-			if(_coat_num * 2 <= _person_num) then
-				loopnum = _coat_num;
-			else 
-			  loopnum = trunc( _person_num / 2);
-			end if;
-		end if;
-	end if;
+  loopnum = 1;
 
-	if loopnum = 0 then
-		loopnum := 1;
-	end if;
+  if _dobules_flg = true then
+     if _coat_num * 4 > _person_num then
+        _coat_num = trunc(_person_num / 4);
+     end if;
+  else if _coat_num * 2 > _person_num then
+        _coat_num = trunc(_person_num / 2);
+        end if;
+  end if;
 
   delete from games where userid = _userid;
 
@@ -447,7 +436,7 @@ begin
   OPEN cur1;
   LOOP	
    		FETCH cur1 INTO _random_number_table_rec;
-			EXIT WHEN NOT FOUND;
+	   		EXIT WHEN NOT FOUND;
 
 			_p1 = _random_number_table_rec.p1;
 			_p2 = _random_number_table_rec.p2;
@@ -462,17 +451,14 @@ begin
 			--RAISE INFO 'rec=> % % % % %',_i_loop, _p1,_p2,_p3,_p4;
 			if(_dobules_flg = true ) then
 				insert into game_record ( game_id, game_no, player_1, player_2,player_3,player_4 ) 
-				values ( v_id, _i_loop, _p1, _p2, _p3, _p4);
+				values ( v_id, loopnum, _p1, _p2, _p3, _p4);
 			else
 				insert into game_record ( game_id, game_no,player_1, player_2 ) 
-				values ( v_id, _i_loop, _p1, _p2);
+				values ( v_id, loopnum, _p1, _p2);
 			end if;
 
-			_i_loop = _i_loop + 1;
-			if ( _i_loop > loopnum ) then
-				_i_loop = 1;
-			end if;
-
+                        loopnum = loopnum + 1;
+                        
   END LOOP;
   CLOSE cur1;
 
@@ -1448,9 +1434,16 @@ COPY auth.users (instance_id, id, aud, role, email, encrypted_password, email_co
 --
 
 COPY public.game_record (id, created_at, modified_at, game_no, player_1, player_2, player_3, player_4, score_1, score_2, game_id) FROM stdin;
-77	2023-08-13 13:50:17.131948+00	2023-08-13 13:50:17.131948+00	1	1	3	2	4	0	0	49
-78	2023-08-13 13:50:17.131948+00	2023-08-13 13:50:17.131948+00	1	1	4	2	3	0	0	49
-76	2023-08-13 13:50:17.131948+00	2023-08-13 13:50:17.131948+00	1	1	2	3	4	4	0	49
+859	2023-08-17 14:25:03.997434+00	2023-08-17 14:25:03.997434+00	1	1	2	3	4	0	0	101
+860	2023-08-17 14:25:03.997434+00	2023-08-17 14:25:03.997434+00	2	5	6	1	7	0	0	101
+861	2023-08-17 14:25:03.997434+00	2023-08-17 14:25:03.997434+00	3	2	4	3	6	0	0	101
+862	2023-08-17 14:25:03.997434+00	2023-08-17 14:25:03.997434+00	4	5	7	1	4	0	0	101
+863	2023-08-17 14:25:03.997434+00	2023-08-17 14:25:03.997434+00	5	2	6	3	7	0	0	101
+864	2023-08-17 14:25:03.997434+00	2023-08-17 14:25:03.997434+00	6	1	5	4	6	0	0	101
+865	2023-08-17 14:25:03.997434+00	2023-08-17 14:25:03.997434+00	7	2	7	3	5	0	0	101
+866	2023-08-17 14:25:03.997434+00	2023-08-17 14:25:03.997434+00	8	1	6	4	7	0	0	101
+867	2023-08-17 14:25:03.997434+00	2023-08-17 14:25:03.997434+00	9	2	5	1	3	0	0	101
+868	2023-08-17 14:25:03.997434+00	2023-08-17 14:25:03.997434+00	10	6	7	4	5	0	0	101
 \.
 
 
@@ -1459,10 +1452,13 @@ COPY public.game_record (id, created_at, modified_at, game_no, player_1, player_
 --
 
 COPY public.game_user (id, created_at, modified_at, player_no, player_name, game_id) FROM stdin;
-61	2023-08-13 13:50:17.131948+00	2023-08-13 13:50:17.131948+00	1	NULL	49
-62	2023-08-13 13:50:17.131948+00	2023-08-13 13:50:17.131948+00	2	NULL	49
-63	2023-08-13 13:50:17.131948+00	2023-08-13 13:50:17.131948+00	3	NULL	49
-64	2023-08-13 13:50:17.131948+00	2023-08-13 13:50:17.131948+00	4	NULL	49
+431	2023-08-17 14:25:03.997434+00	2023-08-17 14:25:03.997434+00	1	NULL	101
+432	2023-08-17 14:25:03.997434+00	2023-08-17 14:25:03.997434+00	2	NULL	101
+433	2023-08-17 14:25:03.997434+00	2023-08-17 14:25:03.997434+00	3	NULL	101
+434	2023-08-17 14:25:03.997434+00	2023-08-17 14:25:03.997434+00	4	NULL	101
+435	2023-08-17 14:25:03.997434+00	2023-08-17 14:25:03.997434+00	5	NULL	101
+436	2023-08-17 14:25:03.997434+00	2023-08-17 14:25:03.997434+00	6	NULL	101
+437	2023-08-17 14:25:03.997434+00	2023-08-17 14:25:03.997434+00	7	NULL	101
 \.
 
 
@@ -1471,7 +1467,7 @@ COPY public.game_user (id, created_at, modified_at, player_no, player_name, game
 --
 
 COPY public.games (id, created_at, modified_at, player_num, coat_num, dobules_flg, userid) FROM stdin;
-49	2023-08-13 13:50:17.131948+00	2023-08-13 13:50:17.131948+00	4	1	t	Ufe9e746df649a4b36e12b70e87d30aa4
+101	2023-08-17 14:25:03.997434+00	2023-08-17 14:25:03.997434+00	7	1	t	Ufe9e746df649a4b36e12b70e87d30aa4
 \.
 
 
@@ -5583,21 +5579,21 @@ SELECT pg_catalog.setval('auth.refresh_tokens_id_seq', 1, false);
 -- Name: game_record_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.game_record_id_seq', 78, true);
+SELECT pg_catalog.setval('public.game_record_id_seq', 868, true);
 
 
 --
 -- Name: game_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.game_user_id_seq', 64, true);
+SELECT pg_catalog.setval('public.game_user_id_seq', 437, true);
 
 
 --
 -- Name: games_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.games_id_seq', 49, true);
+SELECT pg_catalog.setval('public.games_id_seq', 101, true);
 
 
 --
@@ -5611,7 +5607,7 @@ SELECT pg_catalog.setval('public.random_number_table_id_seq', 4080, true);
 -- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.users_id_seq', 47, true);
+SELECT pg_catalog.setval('public.users_id_seq', 78, true);
 
 
 --
