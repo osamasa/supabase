@@ -108,7 +108,9 @@ DROP TABLE auth.flow_state;
 DROP TABLE auth.audit_log_entries;
 DROP PROCEDURE public.testfnc(IN text, IN numeric, IN numeric, IN boolean);
 DROP PROCEDURE public.testfnc(IN numeric, IN numeric, IN numeric, IN boolean);
+DROP FUNCTION public.newmakenewgame(_userid text, _person_num numeric, _coat_num numeric, _dobules_flg boolean);
 DROP FUNCTION public.makenewgame(_userid numeric, _person_num numeric, _coat_num numeric, _dobules_flg boolean);
+DROP FUNCTION public.hello_world();
 DROP FUNCTION auth.uid();
 DROP FUNCTION auth.role();
 DROP FUNCTION auth.jwt();
@@ -283,6 +285,19 @@ COMMENT ON FUNCTION auth.uid() IS 'Deprecated. Use auth.jwt() -> ''sub'' instead
 
 
 --
+-- Name: hello_world(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.hello_world() RETURNS text
+    LANGUAGE sql
+    AS $$
+  select 'Hello world';
+$$;
+
+
+ALTER FUNCTION public.hello_world() OWNER TO postgres;
+
+--
 -- Name: makenewgame(numeric, numeric, numeric, boolean); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -327,10 +342,11 @@ begin
 		loopnum := 1;
 	end if;
 
-	insert into games (player_num, coat_num ,dobules_flg, user_id) 
-	values ( _person_num, _coat_num, _dobules_flg, _user_id)
+	insert into games (player_num, coat_num ,dobules_flg, userid) 
+	values ( _person_num, _coat_num, _dobules_flg, _userid)
 	returning id into v_id;
 
+  delete from games where userid = _userid;
 	delete from games where updated_at < now() - interval '100 days';
 
   OPEN cur1;
@@ -376,6 +392,87 @@ $$;
 
 
 ALTER FUNCTION public.makenewgame(_userid numeric, _person_num numeric, _coat_num numeric, _dobules_flg boolean) OWNER TO postgres;
+
+--
+-- Name: newmakenewgame(text, numeric, numeric, boolean); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.newmakenewgame(_userid text, _person_num numeric, _coat_num numeric, _dobules_flg boolean) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+declare
+
+_random_number_table_rec RECORD;
+_p1 integer;
+_p2 integer;
+_p3 integer;
+_p4 integer;
+_no integer;
+loopnum integer;
+_i_loop integer;
+v_id integer;
+
+cur1 CURSOR FOR
+	select no,p1,p2 from random_number_table where person_num=_person_num ORDER by no;
+
+begin
+  loopnum = 1;
+
+  if _dobules_flg = true then
+     if _coat_num * 4 > _person_num then
+        _coat_num = trunc(_person_num / 4);
+     end if;
+  else if _coat_num * 2 > _person_num then
+        _coat_num = trunc(_person_num / 2);
+        end if;
+  end if;
+
+  delete from games where userid = _userid;
+
+	insert into games (player_num, coat_num ,dobules_flg, userid) 
+	values ( _person_num, _coat_num, _dobules_flg, _userid)
+	returning id into v_id;
+
+  OPEN cur1;
+  LOOP	
+   		FETCH cur1 INTO _random_number_table_rec;
+	   		EXIT WHEN NOT FOUND;
+
+			_p1 = _random_number_table_rec.p1;
+			_p2 = _random_number_table_rec.p2;
+			if _dobules_flg = true then
+   			FETCH cur1 INTO _random_number_table_rec;
+				EXIT WHEN NOT FOUND;
+
+				_p3 = _random_number_table_rec.p1;
+				_p4 = _random_number_table_rec.p2;
+			end if;
+
+			--RAISE INFO 'rec=> % % % % %',_i_loop, _p1,_p2,_p3,_p4;
+			if(_dobules_flg = true ) then
+				insert into game_record ( game_id, game_no, player_1, player_2,player_3,player_4 ) 
+				values ( v_id, loopnum, _p1, _p2, _p3, _p4);
+			else
+				insert into game_record ( game_id, game_no,player_1, player_2 ) 
+				values ( v_id, loopnum, _p1, _p2);
+			end if;
+
+                        loopnum = loopnum + 1;
+                        
+  END LOOP;
+  CLOSE cur1;
+
+	for _i_loop in 1.._person_num loop
+		insert into game_user (player_no, game_id)
+		values ( _i_loop, v_id );
+	end loop;
+
+	return v_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.newmakenewgame(_userid text, _person_num numeric, _coat_num numeric, _dobules_flg boolean) OWNER TO postgres;
 
 --
 -- Name: testfnc(numeric, numeric, numeric, boolean); Type: PROCEDURE; Schema: public; Owner: postgres
@@ -1011,14 +1108,14 @@ CREATE TABLE public.game_record (
     id bigint NOT NULL,
     created_at timestamp with time zone DEFAULT now(),
     modified_at timestamp with time zone DEFAULT now() NOT NULL,
-    game_id bigint NOT NULL,
     game_no smallint NOT NULL,
     player_1 smallint,
     player_2 smallint,
     player_3 smallint,
     player_4 smallint,
     score_1 smallint DEFAULT '0'::smallint NOT NULL,
-    score_2 smallint DEFAULT '0'::smallint NOT NULL
+    score_2 smallint DEFAULT '0'::smallint NOT NULL,
+    game_id bigint
 );
 
 
@@ -1048,7 +1145,7 @@ CREATE TABLE public.game_user (
     modified_at timestamp with time zone DEFAULT now() NOT NULL,
     player_no smallint NOT NULL,
     player_name text DEFAULT 'NULL'::text,
-    game_id bigint NOT NULL
+    game_id bigint
 );
 
 
@@ -1078,7 +1175,9 @@ CREATE TABLE public.games (
     modified_at timestamp with time zone DEFAULT now(),
     player_num smallint DEFAULT '4'::smallint NOT NULL,
     coat_num smallint DEFAULT '1'::smallint NOT NULL,
-    dobules_flg boolean DEFAULT true NOT NULL
+    dobules_flg boolean DEFAULT true NOT NULL,
+    userid text DEFAULT ''::text NOT NULL,
+    curgame smallint DEFAULT '1'::smallint
 );
 
 
@@ -1335,7 +1434,34 @@ COPY auth.users (instance_id, id, aud, role, email, encrypted_password, email_co
 -- Data for Name: game_record; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.game_record (id, created_at, modified_at, game_id, game_no, player_1, player_2, player_3, player_4, score_1, score_2) FROM stdin;
+COPY public.game_record (id, created_at, modified_at, game_no, player_1, player_2, player_3, player_4, score_1, score_2, game_id) FROM stdin;
+1097	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	1	1	2	3	4	0	0	116
+1098	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	2	5	6	7	8	0	0	116
+1099	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	3	9	10	1	11	0	0	116
+1100	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	4	2	4	3	6	0	0	116
+1101	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	5	5	8	7	10	0	0	116
+1102	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	6	9	11	1	4	0	0	116
+1103	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	7	2	6	3	8	0	0	116
+1104	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	8	5	10	7	11	0	0	116
+1105	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	9	1	9	4	6	0	0	116
+1106	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	10	2	8	3	10	0	0	116
+1107	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	11	5	11	7	9	0	0	116
+1108	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	12	1	6	4	8	0	0	116
+1109	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	13	2	10	3	11	0	0	116
+1110	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	14	5	9	1	7	0	0	116
+1111	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	15	6	8	4	10	0	0	116
+1112	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	16	2	11	3	9	0	0	116
+1113	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	17	5	7	1	8	0	0	116
+1114	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	18	6	10	4	11	0	0	116
+1115	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	19	2	9	3	7	0	0	116
+1116	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	20	1	5	8	10	0	0	116
+1117	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	21	6	11	4	9	0	0	116
+1118	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	22	2	7	3	5	0	0	116
+1119	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	23	1	10	8	11	0	0	116
+1120	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	24	6	9	4	7	0	0	116
+1121	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	25	2	5	1	3	0	0	116
+1122	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	26	10	11	8	9	0	0	116
+1123	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	27	6	7	4	5	0	0	116
 \.
 
 
@@ -1344,6 +1470,17 @@ COPY public.game_record (id, created_at, modified_at, game_id, game_no, player_1
 --
 
 COPY public.game_user (id, created_at, modified_at, player_no, player_name, game_id) FROM stdin;
+540	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	1	NULL	116
+541	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	2	NULL	116
+542	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	3	NULL	116
+543	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	4	NULL	116
+544	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	5	NULL	116
+545	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	6	NULL	116
+546	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	7	NULL	116
+547	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	8	NULL	116
+548	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	9	NULL	116
+549	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	10	NULL	116
+550	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	11	NULL	116
 \.
 
 
@@ -1351,7 +1488,8 @@ COPY public.game_user (id, created_at, modified_at, player_no, player_name, game
 -- Data for Name: games; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.games (id, created_at, modified_at, player_num, coat_num, dobules_flg) FROM stdin;
+COPY public.games (id, created_at, modified_at, player_num, coat_num, dobules_flg, userid, curgame) FROM stdin;
+116	2023-08-18 09:25:13.715928+00	2023-08-18 09:25:13.715928+00	11	2	t	Ufe9e746df649a4b36e12b70e87d30aa4	1
 \.
 
 
@@ -5448,6 +5586,7 @@ COPY public.random_number_table (id, created_at, no, p1, p2, person_num) FROM st
 --
 
 COPY public.users (id, created_at, modified_at, loginid, login_type) FROM stdin;
+7	2023-08-13 07:56:13.101781+00	2023-08-13 07:56:13.101781+00	Ufe9e746df649a4b36e12b70e87d30aa4	1
 \.
 
 
@@ -5462,21 +5601,21 @@ SELECT pg_catalog.setval('auth.refresh_tokens_id_seq', 1, false);
 -- Name: game_record_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.game_record_id_seq', 28, true);
+SELECT pg_catalog.setval('public.game_record_id_seq', 1123, true);
 
 
 --
 -- Name: game_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.game_user_id_seq', 1, false);
+SELECT pg_catalog.setval('public.game_user_id_seq', 550, true);
 
 
 --
 -- Name: games_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.games_id_seq', 29, true);
+SELECT pg_catalog.setval('public.games_id_seq', 116, true);
 
 
 --
@@ -5490,7 +5629,7 @@ SELECT pg_catalog.setval('public.random_number_table_id_seq', 4080, true);
 -- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.users_id_seq', 1, true);
+SELECT pg_catalog.setval('public.users_id_seq', 85, true);
 
 
 --
@@ -6020,24 +6159,6 @@ ALTER TABLE ONLY public.game_user
 
 
 --
--- Name: game_record; Type: ROW SECURITY; Schema: public; Owner: postgres
---
-
-ALTER TABLE public.game_record ENABLE ROW LEVEL SECURITY;
-
---
--- Name: game_user; Type: ROW SECURITY; Schema: public; Owner: postgres
---
-
-ALTER TABLE public.game_user ENABLE ROW LEVEL SECURITY;
-
---
--- Name: users; Type: ROW SECURITY; Schema: public; Owner: postgres
---
-
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-
---
 -- Name: SCHEMA auth; Type: ACL; Schema: -; Owner: supabase_admin
 --
 
@@ -6090,12 +6211,30 @@ GRANT ALL ON FUNCTION auth.uid() TO dashboard_user;
 
 
 --
+-- Name: FUNCTION hello_world(); Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON FUNCTION public.hello_world() TO anon;
+GRANT ALL ON FUNCTION public.hello_world() TO authenticated;
+GRANT ALL ON FUNCTION public.hello_world() TO service_role;
+
+
+--
 -- Name: FUNCTION makenewgame(_userid numeric, _person_num numeric, _coat_num numeric, _dobules_flg boolean); Type: ACL; Schema: public; Owner: postgres
 --
 
 GRANT ALL ON FUNCTION public.makenewgame(_userid numeric, _person_num numeric, _coat_num numeric, _dobules_flg boolean) TO anon;
 GRANT ALL ON FUNCTION public.makenewgame(_userid numeric, _person_num numeric, _coat_num numeric, _dobules_flg boolean) TO authenticated;
 GRANT ALL ON FUNCTION public.makenewgame(_userid numeric, _person_num numeric, _coat_num numeric, _dobules_flg boolean) TO service_role;
+
+
+--
+-- Name: FUNCTION newmakenewgame(_userid text, _person_num numeric, _coat_num numeric, _dobules_flg boolean); Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT ALL ON FUNCTION public.newmakenewgame(_userid text, _person_num numeric, _coat_num numeric, _dobules_flg boolean) TO anon;
+GRANT ALL ON FUNCTION public.newmakenewgame(_userid text, _person_num numeric, _coat_num numeric, _dobules_flg boolean) TO authenticated;
+GRANT ALL ON FUNCTION public.newmakenewgame(_userid text, _person_num numeric, _coat_num numeric, _dobules_flg boolean) TO service_role;
 
 
 --
