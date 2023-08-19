@@ -1,6 +1,16 @@
-drop function addgames;
-
-CREATE FUNCTION public.addgames(_v_id numeric, _person_num numeric, _coat_num numeric, _dobules_flg boolean,_last_no numeric) RETURNS VOID AS $$
+CREATE FUNCTION public.addnewgames(_v_id numeric, _person_num numeric, _coat_num numeric, _dobules_flg boolean,_last_no numeric) RETURNS TABLE(
+       id int8,
+       game_no int2,
+       player_1 int2,
+       player_2 int2,
+       player_3 int2,
+       player_4 int2,
+       created_at timestamptz,
+       modified_at timestamptz,
+       score_1 int2,
+       score_2 int2,
+       game_id int8               
+)  AS $$
 declare
 
 _random_number_table_rec RECORD;
@@ -54,6 +64,24 @@ begin
                         
     END LOOP;
     CLOSE cur1;
+    
+    RETURN QUERY
+    select game_record.id,
+           game_record.game_no,
+           game_record.player_1,
+           game_record.player_2,
+           game_record.player_3,
+           game_record.player_4,
+           game_record.created_at,
+           game_record.modified_at,
+           game_record.score_1,
+           game_record.score_2,
+           game_record.game_id
+    from game_record
+    where game_record.game_id = _v_id
+    and
+    game_record.game_no > _last_no;
+    
   END;
 
 $$ LANGUAGE plpgsql;
